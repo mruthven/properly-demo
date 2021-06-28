@@ -31,7 +31,8 @@ provider:
           Action:
             - dynamodb:Query
             - dynamodb:Scan
-          Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.PROPERTY_TABLE}/index/*"
+          Resource:
+            - Fn::Join: [ "", [ Fn::GetAtt: [ PropertyTable, Arn ], "/index/*" ] ]
   environment:
     USERS_TABLE: ${self:custom.tableName}
     PROPERTY_TABLE: ${self:custom.propTableName}
