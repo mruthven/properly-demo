@@ -5,6 +5,7 @@ const serverless = require("serverless-http");
 const app = express();
 
 const USERS_TABLE = process.env.USERS_TABLE;
+const PROPERTY_TABLE = process.env.PROPERTY_TABLE;
 const dynamoDbClient = new AWS.DynamoDB.DocumentClient();
 
 app.use(express.json());
@@ -104,11 +105,66 @@ app.post("/users", async function (req, res) {
   }
 });
 
+app.get("/properties/active", async function (req, res) {
+  const params = {
+    TableName: PROPERTY_TABLE,
+    IndexName: "propertyIsActive",
+    KeyConditionExpression: "isActive = :active",
+    ExpressionAttributeValues: {
+        ":active": 1
+    }
+  };
+
+  try {
+    const results = [];
+    let items = await dynamoDbClient.query(params).promise();
+    console.log(items);
+
+    items.Items.forEach(item => results.push(item));
+    console.log(results);
+    
+    res.json(results);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Could not retrieve active properties" });
+  }
+});
+
+app.post("/properties", async function (req, res) {
+  const { propertyId, location, isActive } = req.body;
+  if (typeof propertyId !== "number") {
+    res.status(400).json({ error: '"propertyID" must be a number' });
+  } else if (typeof location !== "string") {
+    res.status(400).json({ error: '"location" must be a string' });
+  } else if (typeof isActive !== "string" || (isActive !== "true" && isActive !== "false")) {
+    res.status(400).json({ error: '"isActive" must be a "true" or "false"'});
+  }
+
+  const activeBin = (isActive == "true") ? 1 : 0;
+
+  const params = {
+    TableName: PROPERTY_TABLE,
+    Item: {
+      propertyId: propertyId,
+      location: location,
+      isActive: activeBin
+    }
+  };
+
+  try {
+    await dynamoDbClient.put(params).promise();
+    res.json({ propertyId, location, isActive });
+  } catch (error) {
+    console.log(params.Item)
+    console.log(error);
+    res.status(500).json({ error: "Could not create property" });
+  }
+});
+
 app.use((req, res, next) => {
   return res.status(404).json({
     error: "Not Found",
   });
 });
-
 
 module.exports.handler = serverless(app);

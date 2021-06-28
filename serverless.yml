@@ -6,6 +6,7 @@ frameworkVersion: '2'
 
 custom:
   tableName: 'users-table-${self:provider.stage}'
+  propTableName: 'property-table-${self:provider.stage}'
 
 provider:
   name: aws
@@ -25,8 +26,15 @@ provider:
             - dynamodb:DeleteItem
           Resource:
             - Fn::GetAtt: [ UsersTable, Arn ]
+            - Fn::GetAtt: [ PropertyTable, Arn ]
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+          Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.PROPERTY_TABLE}/index/*"
   environment:
     USERS_TABLE: ${self:custom.tableName}
+    PROPERTY_TABLE: ${self:custom.propTableName}
 
 functions:
   api:
@@ -54,3 +62,32 @@ resources:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
         TableName: ${self:custom.tableName}
+    PropertyTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: propertyId
+            AttributeType: N
+          - AttributeName: location
+            AttributeType: S
+          - AttributeName: isActive
+            AttributeType: N
+        KeySchema:
+          - AttributeName: propertyId
+            KeyType: HASH
+          - AttributeName: location
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: propertyIsActive
+            KeySchema:
+            - AttributeName: isActive
+              KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.propTableName}
