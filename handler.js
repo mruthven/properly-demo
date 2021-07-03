@@ -140,7 +140,7 @@ app.post("/properties", async function (req, res) {
     res.status(400).json({ error: '"isActive" must be a "true" or "false"'});
   }
 
-  const activeBin = (isActive == "true") ? 1 : 0;
+  const activeBin = (isActive === "true") ? 1 : 0;
 
   const params = {
     TableName: PROPERTY_TABLE,
